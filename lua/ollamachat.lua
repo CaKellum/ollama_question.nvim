@@ -25,11 +25,11 @@ local grab_buffer = function ()
 	return table.concat(buffer, "\n")
 end
 
-local function prompt()
+local function prompt(url)
 	local prompt_text = grab_buffer()
 	vim.api.nvim_put({"", ""}, "l", true, true)
 	curl.post({
-		url = "http://192.168.1.85:11434/api/generate",
+		url = url,
 		stream = function (_, chunk)
 			if chunk then
 				local res = vim.json.decode(chunk)
@@ -39,7 +39,7 @@ local function prompt()
 					end)
 				else
 					vim.schedule(function ()
-						vim.api.nvim_put({"____________________"}, "l", true, true)
+					vim.api.nvim_put({"____________________"}, "l", true, true)
 					end)
 				end
 			end
@@ -51,10 +51,17 @@ local function prompt()
 	})
 end
 
-local function main()
+local function main(opts)
 	make_window()
-	vim.api.nvim_buf_set_keymap(0, "n","<space><space>y" , "", {callback = prompt})
+	vim.api.nvim_buf_set_keymap(0, "n","<space><space>y" , "", {callback = (function ()
+		prompt(opts.url)
+	end)})
 end
 
+local function setup(opts)
+	opts = opts or {} -- defaults to empty table
+	local url = opts.url or "http://127.0.0.1:11434/api/generate"
+	vim.api.nvim_create_user_command("OllamaChat",main, {url = url})
+end
 
-vim.api.nvim_create_user_command("OllamaChat",main, {})
+return setup
