@@ -27,18 +27,10 @@ end
 local grab_buffer = function()
     if buf_nbr then
         local buffer = vim.api.nvim_buf_get_lines(buf_nbr, 0, vim.api.nvim_buf_line_count(buf_nbr), false)
-        return table.concat(buffer, "\r\n")
+        return table.concat(buffer, "\n")
     end
-    return {}
-end
 
-local add_line_break = function(str)
-    if buf_nbr then
-        local last = vim.api.nvim_buf_get_lines(buf_nbr, vim.api.nvim_buf_line_count(buf_nbr) - 1,
-            vim.api.nvim_buf_line_count(buf_nbr), false)
-        if #last > 100 then return str.concat("\r\n") else return str end
-    end
-    return str
+    return {}
 end
 
 local function prompt(url)
@@ -49,12 +41,15 @@ local function prompt(url)
         stream = function(_, chunk)
             if chunk then
                 local res = vim.json.decode(chunk)
-                if res.error then
-                    print(res.error)
-                end
+                if res.error then print(res.error) end
                 if not res.done then
                     vim.schedule(function()
-                        vim.api.nvim_put({ add_line_break(res.response) }, "", true, true)
+                        local response = {}
+                        if #response == 0 then
+                            local response_str = res.response:match("\0")
+                            table.insert(response, response_str)
+                        end
+                        vim.api.nvim_put(response, "", true, true)
                     end)
                 else
                     vim.schedule(function()
@@ -73,9 +68,7 @@ end
 local function main(url)
     make_window()
     vim.api.nvim_buf_set_keymap(0, "n", "<space><space>", "", {
-        callback = (function()
-            prompt(url)
-        end)
+        callback = (function() prompt(url) end)
     })
 end
 
